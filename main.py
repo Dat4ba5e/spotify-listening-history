@@ -2,14 +2,14 @@ import sqlalchemy
 from sqlalchemy.orm import sessionmaker
 import requests
 import json
-from datetime import datetime
+from datetime import date, datetime
 import datetime
 import pandas as pd
 import sqlite3
 
 DATABASE_LOCATION = "sqlite:///my_played_tracks.sqlite"
 USER_ID = "f6frc1m72da9a2r0chb3vj85w"
-TOKEN = "BQAqGP_05MiGt3PILEmcMK3rHZT5Q-URHS9cyvNRNzfLI98k5sT-vkWEZggT-AmSDweEO2xvDzpI8Kma31mdwEwuOHmdVwmQWW2qtvpqnfruYKs9okWBwvAU4OeXlXAVrxz68KGuCQw6Yaj1OUoGYGu1-aCYxcpJFjjnfd7l"
+TOKEN = "BQATo3HuR0i7C4D_jxcHYEFOrz3tDK7SpDpTMw4GmKvVZ5cY0gqgHvFE4rDFdJBOLYjc6oMKg57tucZn9PTFJkfY1G9AaCpHkEkhrbMQcWQEds1XV2z6q1wSFwvWIc84PbsKcqRpD4JMnRvDXI3M4gxXOkJbKnJrIR9eLFPK"
 
 if __name__ == "__main__":
 
@@ -24,12 +24,10 @@ if __name__ == "__main__":
     yesterday_unix_timestamp = int(yesterday.timestamp()) * 1000
 
     r = requests.get(
-        "https://api.spotify.com/v1/me/player/recently-played?after={time}".format(time=yesterday_unix_timestamp),
+        "https://api.spotify.com/v1/me/player/recently-played?limit=50&after={time}".format(time=yesterday_unix_timestamp),
         headers=headers)
 
     data = r.json()
-
-    print(data)
 
     song_names = []
     artist_names = []
@@ -38,13 +36,9 @@ if __name__ == "__main__":
 
     for song in data["items"]:
         song_names.append(song["track"]["name"])
-        print(song_names)
         artist_names.append(song["track"]["album"]["artists"][0]["name"])
-        print(artist_names)
         played_at_list.append(song["played_at"])
-        print(played_at_list)
         timestamps.append(song["played_at"][0:10])
-        print(timestamps)
 
     song_dict = {
         "song_name": song_names,
@@ -56,3 +50,5 @@ if __name__ == "__main__":
     song_df = pd.DataFrame(song_dict, columns=["song_name", "artist_name", "played_at", "timestamp"])
 
     print(song_df)
+    
+    
