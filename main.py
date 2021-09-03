@@ -14,16 +14,18 @@ TOKEN = "BQAqGP_05MiGt3PILEmcMK3rHZT5Q-URHS9cyvNRNzfLI98k5sT-vkWEZggT-AmSDweEO2x
 if __name__ == "__main__":
 
     headers = {
-        "Accept" : "application/json",
-        "Content-Type" : "application/json",
-        "Authorization" : "Bearer {token}".format(token=TOKEN)
+        "Accept": "application/json",
+        "Content-Type": "application/json",
+        "Authorization": "Bearer {token}".format(token=TOKEN)
     }
 
     today = datetime.datetime.now()
     yesterday = today - datetime.timedelta(days=1)
     yesterday_unix_timestamp = int(yesterday.timestamp()) * 1000
 
-    r = requests.get("https://api.spotify.com/v1/me/player/recently-played?after={time}".format(time=yesterday_unix_timestamp), headers = headers)
+    r = requests.get(
+        "https://api.spotify.com/v1/me/player/recently-played?after={time}".format(time=yesterday_unix_timestamp),
+        headers=headers)
 
     data = r.json()
 
@@ -45,12 +47,12 @@ if __name__ == "__main__":
         print(timestamps)
 
     song_dict = {
-        "song_name" : song_names,
-        "artist_name" : artist_names,
-        "played_at" : played_at_list,
-        "timestamp" : timestamps
+        "song_name": song_names,
+        "artist_name": artist_names,
+        "played_at": played_at_list,
+        "timestamp": timestamps
     }
 
-    song_df = pd.DataFrame(song_dict,columns = ["song_name", "artist_name", "played_at", "timestamp"])
+    song_df = pd.DataFrame(song_dict, columns=["song_name", "artist_name", "played_at", "timestamp"])
 
     print(song_df)
