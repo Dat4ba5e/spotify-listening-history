@@ -10,7 +10,7 @@ import sqlite3
 DATABASE_LOCATION = "sqlite:///my_played_tracks.sqlite"
 USER_ID = "f6frc1m72da9a2r0chb3vj85w"
 # get token from: https://developer.spotify.com/console/get-recently-played/?limit=&after=&before=
-TOKEN = "BQCvwZmJXsKxYb9gMhHLiC_HQDmudibwRP4Kec8tnQ9l9qIEf9ZhCjpvhuRcDmve8_h2E8wsR0EfiY_lh62xDfhZkc9a5C48PwwWL_qcLYnb2J3IVmW6lu5xWpPko5LYkUVRgKPrfv5kOnni9ZMwFzjyfPThxnaOn-t-YaJZ"
+TOKEN = "BQBqoJ_md2jb-vQYO26HKk06mFzQo2L0B5KniTLa-rmbUyA5RcnUToPTeldlTN42XMcTUySe7XrEYmiUC2PDHCWOOYJvKK0J_WKYfbwkr_L5UY_knkIqVb2MCNHhzQ4EM3UG_RT2LDjNPgoE7iZHgcRwGZw9NwO-byrR1Z6g"
 
 def check_if_valid_data(df: pd.DataFrame) -> bool:
     # Check if DataFrame is empty
@@ -35,7 +35,10 @@ def check_if_valid_data(df: pd.DataFrame) -> bool:
     timestamps = df["timestamp"].tolist()
     for timestamp in timestamps:
         if datetime.datetime.strptime(timestamp, "%Y-%m-%d") != yesterday:
-            raise Exception("At least one of the returned songs is not from within the last 24 hours")
+            df = df[df.timestamp == yesterday]
+            print("Removed tracks with a timestamp that wasn't yesterday")
+            print(df)
+            #raise Exception("At least one of the returned songs is not from within the last 24 hours")
 
     return True
 
@@ -86,6 +89,8 @@ if __name__ == "__main__":
     # Validate
     if check_if_valid_data(song_df):
         print("Data is valid, proceed to Load stage")
+
+    print(song_df)
 
     # Load to DB
     engine = sqlalchemy.create_engine(DATABASE_LOCATION)
