@@ -10,7 +10,7 @@ import sqlite3
 DATABASE_LOCATION = "sqlite:///my_played_tracks.sqlite"
 USER_ID = "f6frc1m72da9a2r0chb3vj85w"
 # get token from: https://developer.spotify.com/console/get-recently-played/?limit=&after=&before=
-TOKEN = "BQBqoJ_md2jb-vQYO26HKk06mFzQo2L0B5KniTLa-rmbUyA5RcnUToPTeldlTN42XMcTUySe7XrEYmiUC2PDHCWOOYJvKK0J_WKYfbwkr_L5UY_knkIqVb2MCNHhzQ4EM3UG_RT2LDjNPgoE7iZHgcRwGZw9NwO-byrR1Z6g"
+TOKEN = "BQAJSPtjb7FNDuXbXmhGO3cTwLxik9mp8GEM-1zw97Cg8VWJmpDy8RRMR6uYy_c6mmxBt3Ye2bRtG_IVM3lv8JaeJNxYPkhWi13xaMqSq_MIAaARPmNyiPCtpv-kNSmt3L-RXzAxy7nh4jc7Zt-AYo2e4PS3T37cIRjveq35"
 
 def check_if_valid_data(df: pd.DataFrame) -> bool:
     # Check if DataFrame is empty
@@ -90,9 +90,18 @@ if __name__ == "__main__":
     if check_if_valid_data(song_df):
         print("Data is valid, proceed to Load stage")
 
-    print(song_df)
 
+
+
+    print(song_df)
+    dump = song_df.to_json()
+    with open("interfaces.json", "w") as jsonFile:
+        json.dump(dump, jsonFile, indent=4, sort_keys=False)
     # Load to DB
+
+
+
+
     engine = sqlalchemy.create_engine(DATABASE_LOCATION)
     conn = sqlite3.connect('my_played_tracks.sqlite')
     cursor = conn.cursor()
