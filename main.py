@@ -10,7 +10,7 @@ import sqlite3
 DATABASE_LOCATION = "sqlite:///my_played_tracks.sqlite"
 USER_ID = "f6frc1m72da9a2r0chb3vj85w"
 # get token from: https://developer.spotify.com/console/get-recently-played/?limit=&after=&before=
-TOKEN = "BQAJSPtjb7FNDuXbXmhGO3cTwLxik9mp8GEM-1zw97Cg8VWJmpDy8RRMR6uYy_c6mmxBt3Ye2bRtG_IVM3lv8JaeJNxYPkhWi13xaMqSq_MIAaARPmNyiPCtpv-kNSmt3L-RXzAxy7nh4jc7Zt-AYo2e4PS3T37cIRjveq35"
+TOKEN = "BQDj2YnATWVgl39UqaSeIaL1_Q3DTd-CeIytl6cneYiOIP6YlxhM5TT87XTdae7XSOiVEpuYYoAkuk3fgXSawBOASYUhOgsN6VOYmudsSlqKaTnWeXs1YnuoFHR4SzMSE0NazD6JkRE2TLc2vitz2Fhr-hDIQ0rAviONZ0h5"
 
 def check_if_valid_data(df: pd.DataFrame) -> bool:
     # Check if DataFrame is empty
