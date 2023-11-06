@@ -119,3 +119,4 @@ authentication.json
 
 *.sqlite
 error_log.json
+access_token.json

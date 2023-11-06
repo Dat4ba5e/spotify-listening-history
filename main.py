@@ -11,12 +11,29 @@ import sqlite3
 
 DATABASE_LOCATION = "sqlite:///my_played_tracks.sqlite"
 
+def test_api():
+    TOKEN = request_token()
+    headers = {
+        #"Accept": "application/json",
+        #"Content-Type": "application/json",
+        "Authorization": f"Bearer {TOKEN}"
+    }
+
+    #print("https://api.spotify.com/v1/me/player/recently-played?limit=50&after={time}".format(time=yesterday_unix_timestamp))
+    print("")
+    print("Testing API")
+    r = requests.get(
+        "https://api.spotify.com/v1/artists/4Z8W4fKeB5YxbusRsdQVPb",
+        headers=headers)
+    response = r.json()
+    print(response)
 
 def request_token():
     file = open("authentication.json")
     data = json.load(file)
 
     #print(data["spotify"]["client_id"])
+    
 
     client_id = data["spotify"]["client_id"]
     client_secret = data["spotify"]["client_secret"]
@@ -28,7 +45,11 @@ def request_token():
         "https://accounts.spotify.com/api/token?grant_type=client_credentials&client_id={id}&client_secret={secret}&scope=user-read-recently-played".format(id=client_id, secret=client_secret), headers=headers)
     response = r.json()
 
-    return response["access_token"]
+    print(response)
+    response.update({"Renewal_at": datetime.datetime.now().timestamp() + response["expires_in"]-10} )
+    with open("access_token.json", "w") as outfile:
+        outfile.write(json.dumps(response, indent=4))
+    #return response["access_token"]
 
 
 def check_if_valid_data(df: pd.DataFrame) -> bool:
@@ -158,18 +179,32 @@ def write_to_database(song_df):
 
 
 def request_data():
-    TOKEN = request_token()
+    if not os.path.exists("access_token.json"): 
+        print("Requesting initial Token")
+        request_token()
+    if os.path.exists("access_token.json"):
+        print("using current token")
+        file = open("access_token.json")
+        token_information = json.load(file)
+        if datetime.datetime.now().timestamp() >= token_information["Renewal_at"]:
+            print("Token expired, requesting new token")
+            request_token()
+
+    #print(token_information)
+    TOKEN = token_information["access_token"]
+    #print(TOKEN)
     # Extraction of Data
     headers = {
         "Accept": "application/json",
         "Content-Type": "application/json",
-        "Authorization": "Bearer {token}".format(token=TOKEN)
+        "Authorization": f"Bearer {TOKEN}"
     }
 
     today = datetime.datetime.now()
     yesterday = today - datetime.timedelta(days=1)
     yesterday_unix_timestamp = int(yesterday.timestamp()) * 1000
 
+    #print("https://api.spotify.com/v1/me/player/recently-played?limit=50&after={time}".format(time=yesterday_unix_timestamp))
     print("")
     print("Requesting Recently Played Data")
     r = requests.get(
@@ -191,13 +226,15 @@ def request_data():
 
 def start(state):
     if state == 2:
-        time.sleep(600)
+        time.sleep(2)
     elif state == 1: 
         time.sleep(3600)
     request_data()
 
 
 if __name__ == "__main__":
+    #test_api()
     # new_token()
     start(0)
 
+    # write token+requested time to json file -> only request new token if expired
