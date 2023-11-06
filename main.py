@@ -1,6 +1,12 @@
 import os
 import time
+import string
+import random
+import webbrowser
+import base64
+import oauth2_client
 import sqlalchemy
+import urllib.parse
 from sqlalchemy.orm import sessionmaker
 import requests
 import json
@@ -28,28 +34,119 @@ def test_api():
     response = r.json()
     print(response)
 
-def request_token():
+# first thing to do: paste authorization code in file: authorization.json (will be generated while on first run of the program)
+# authorization code: after accepting on the website in the URL after "code="
+def request_authorization_code():
     file = open("authentication.json")
-    data = json.load(file)
+    credentials = json.load(file)
 
-    #print(data["spotify"]["client_id"])
+    # Recommended for protection against attacks such as cross-site request forgery. See RFC-6749.
+    # used for "state" field
+    random_string = ''.join(random.choices(string.ascii_uppercase + string.digits, k=16))
+    print(random_string)
+    url = "https://accounts.spotify.com/authorize?"
+
+    params = {
+    "response_type": "code",
+    "client_id": credentials["spotify"]["client_id"],
+    "scope": credentials["spotify"]["scope"],
+    "redirect_uri": credentials["spotify"]["redirect_uri"],
+    "state": random_string
+    }
+
+    webbrowser.open("https://accounts.spotify.com/authorize?" + urllib.parse.urlencode(params))
     
+    # implement function to automatically filter out the "state"
 
-    client_id = data["spotify"]["client_id"]
-    client_secret = data["spotify"]["client_secret"]
+    r = requests.get(url, params=params)
+    print(r)
+    print(type(r))
+
+    template = {"authorization_key": ""}
+    with open("authorization.json", "w") as outfile:
+        outfile.write(json.dumps(template, indent=4))
+
+
+def get_client_id_secret_b64():
+    pass
+
+
+def request_token():
+    authentication_file = open("authentication.json")
+    authorization_file = open("authorization.json")
+    authentication_data = json.load(authentication_file)
+    authorization_data = json.load(authorization_file)
+
+    client_id = authentication_data["spotify"]["client_id"]
+    client_secret = authentication_data["spotify"]["client_secret"]
+    mix = f"{client_id}:{client_secret}"
+    print(mix)
+    mix_bytes = mix.encode("ascii")
+    mix_b64 = base64.urlsafe_b64encode(mix_bytes).decode("ascii")[:-1]
+    print(mix_b64)
+
     headers = {
+        "Authorization": f"Basic {mix_b64}",
         "Content-Type": "application/x-www-form-urlencoded"
     }
 
-    r = requests.post(
-        "https://accounts.spotify.com/api/token?grant_type=client_credentials&client_id={id}&client_secret={secret}&scope=user-read-recently-played".format(id=client_id, secret=client_secret), headers=headers)
+    print("................")
+    print(authorization_data["authorization_key"])
+    print("................")
+
+    param = {
+        "grant_type": "authorization_code",
+        "code": authorization_data["authorization_key"],
+        "redirect_uri": authentication_data["spotify"]["redirect_uri"]
+    }
+
+    url = "https://accounts.spotify.com/api/token?"
+    r = requests.post(url=url, headers=headers, params=param)
     response = r.json()
 
+    print("LEDERHOSN")
     print(response)
     response.update({"Renewal_at": datetime.datetime.now().timestamp() + response["expires_in"]-10} )
     with open("access_token.json", "w") as outfile:
         outfile.write(json.dumps(response, indent=4))
     #return response["access_token"]
+
+
+def refresh_token():
+    file = open("access_token.json")
+    data = json.load(file)
+    file_auth = open("authentication.json")
+    data2 = json.load(file_auth)
+
+    client_id = data2["spotify"]["client_id"]
+    client_secret = data2["spotify"]["client_secret"]
+    mix = f"{client_id}:{client_secret}"
+    print(mix)
+    mix_bytes = mix.encode("ascii")
+    mix_b64 = base64.urlsafe_b64encode(mix_bytes).decode("ascii")[:-1]
+    
+    refresh_token = data["refresh_token"]
+    #print(refresh_token)
+    client_id = data2["spotify"]["client_id"]
+    url = "https://accounts.spotify.com/api/token?"
+    param = {
+        "grant_type": 'refresh_token',
+        "refresh_token": refresh_token,
+        #"client_id": client_id
+    }
+
+    headers = { "Content-Type": "application/x-www-form-urlencoded", "Authorization": f"Basic {mix_b64}" }
+
+    r = requests.post(url=url, params=param, headers=headers)
+    response = r.json()
+    print(response)
+
+    if "refresh_token" not in response:
+        response.update({ "refresh_token": refresh_token })
+
+    response.update({"Renewal_at": datetime.datetime.now().timestamp() + response["expires_in"]-10} )
+    with open("access_token.json", "w") as outfile:
+        outfile.write(json.dumps(response, indent=4))
 
 
 def check_if_valid_data(df: pd.DataFrame) -> bool:
@@ -137,13 +234,13 @@ def prepare_data(data):
 
     song_df = pd.DataFrame(song_dict, columns=["song_name", "artist_name", "played_at", "timestamp"])
 
-    print(song_df)
+    #print(song_df)
     
     # Validate
     if check_if_valid_data(song_df):
         print("Data is valid, proceed to Load stage")
 
-    print(song_df)
+    #print(song_df)
     dump = song_df.to_json()
     with open("interfaces.json", "w") as jsonFile:
         json.dump(dump, jsonFile, indent=4, sort_keys=False)
@@ -188,7 +285,7 @@ def request_data():
         token_information = json.load(file)
         if datetime.datetime.now().timestamp() >= token_information["Renewal_at"]:
             print("Token expired, requesting new token")
-            request_token()
+            refresh_token()
 
     #print(token_information)
     TOKEN = token_information["access_token"]
@@ -213,7 +310,7 @@ def request_data():
 
     data = r.json()
 
-    print(data)
+    #print(data)
     if "error" in data:
         error_handling(data, "spotify")
     else:
@@ -226,15 +323,19 @@ def request_data():
 
 def start(state):
     if state == 2:
-        time.sleep(2)
+        time.sleep(600)
     elif state == 1: 
         time.sleep(3600)
     request_data()
 
 
 if __name__ == "__main__":
-    #test_api()
-    # new_token()
-    start(0)
+    if os.path.exists("authorization.json"):
+        start(0)
+        #test_api()
+    else:
+        print("You have to generate an Authorization code first: ")
+        print("https://developer.spotify.com/documentation/web-api/tutorials/code-flow")
+        request_authorization_code()
 
     # write token+requested time to json file -> only request new token if expired
