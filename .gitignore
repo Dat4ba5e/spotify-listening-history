@@ -116,3 +116,6 @@ dmypy.json
 .idea/
 
 authentication.json
+
+*.sqlite
+error_log.json

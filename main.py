@@ -16,7 +16,7 @@ def request_token():
     file = open("authentication.json")
     data = json.load(file)
 
-    print(data["spotify"]["client_id"])
+    #print(data["spotify"]["client_id"])
 
     client_id = data["spotify"]["client_id"]
     client_secret = data["spotify"]["client_secret"]
@@ -26,9 +26,9 @@ def request_token():
 
     r = requests.post(
         "https://accounts.spotify.com/api/token?grant_type=client_credentials&client_id={id}&client_secret={secret}&scope=user-read-recently-played".format(id=client_id, secret=client_secret), headers=headers)
-    datarr = r.json()
+    response = r.json()
 
-    return datarr["access_token"]
+    return response["access_token"]
 
 
 def check_if_valid_data(df: pd.DataFrame) -> bool:
@@ -75,9 +75,9 @@ def error_handling(error, source):
     for err in data[source]:
         if err["error"]["status"] == error["error"]["status"]:
             err["error"]["time"].append(int(datetime.datetime.now().timestamp()))
-            counter += 1
+            #counter += 1
 
-    print(counter)
+    #print(counter)
     if counter == 0:
         error["error"].update({"time": [int(datetime.datetime.now().timestamp())]})
         data[source].append(error)
@@ -85,7 +85,14 @@ def error_handling(error, source):
     with open("error_log.json", "w") as outfile:
         outfile.write(json.dumps(data, indent=4))
 
-    start(2)
+    if error["error"]["status"] == 401:
+        print("Requesting new Token")
+        with open("token_log.txt", "a") as outfile:
+            outfile.write("Requesting new Token at time {time}".format(time=datetime.datetime.now().timestamp()))
+        start(0)
+    else:
+        print("Encountered an error, trying again in 10 Minutes")
+        start(2)
 
 
 def prepare_data(data):
@@ -145,7 +152,7 @@ def write_to_database(song_df):
     print("closed DB connection")
 
 
-def request_data():
+def request_data(token):
     TOKEN = request_token()
     # Extraction of Data
     headers = {
@@ -158,6 +165,8 @@ def request_data():
     yesterday = today - datetime.timedelta(days=1)
     yesterday_unix_timestamp = int(yesterday.timestamp()) * 1000
 
+    print("")
+    print("Requesting Recently Played Data")
     r = requests.get(
         "https://api.spotify.com/v1/me/player/recently-played?limit=50&after={time}".format(time=yesterday_unix_timestamp),
         headers=headers)
@@ -174,16 +183,20 @@ def request_data():
         error_handling(data, "spotify")
     else:
         prepare_data(data)
+        print("Got the Data, next query in 1 Hour")
+        start(1)
 
-    start(1)
+    
 
 
 def start(state):
     if state == 2:
-        time.sleep(2)
+        time.sleep(600)
     elif state == 1: 
         time.sleep(3600)
-    request_data()
+    elif state == 0: 
+        token = request_token()
+    request_data(token)
 
 
 if __name__ == "__main__":
