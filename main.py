@@ -1,3 +1,5 @@
+import os
+import time
 import sqlalchemy
 from sqlalchemy.orm import sessionmaker
 import requests
@@ -8,9 +10,26 @@ import pandas as pd
 import sqlite3
 
 DATABASE_LOCATION = "sqlite:///my_played_tracks.sqlite"
-USER_ID = "f6frc1m72da9a2r0chb3vj85w"
-# get token from: https://developer.spotify.com/console/get-recently-played/?limit=&after=&before=
-TOKEN = "BQDj2YnATWVgl39UqaSeIaL1_Q3DTd-CeIytl6cneYiOIP6YlxhM5TT87XTdae7XSOiVEpuYYoAkuk3fgXSawBOASYUhOgsN6VOYmudsSlqKaTnWeXs1YnuoFHR4SzMSE0NazD6JkRE2TLc2vitz2Fhr-hDIQ0rAviONZ0h5"
+
+
+def request_token():
+    file = open("authentication.json")
+    data = json.load(file)
+
+    print(data["spotify"]["client_id"])
+
+    client_id = data["spotify"]["client_id"]
+    client_secret = data["spotify"]["client_secret"]
+    headers = {
+        "Content-Type": "application/x-www-form-urlencoded"
+    }
+
+    r = requests.post(
+        "https://accounts.spotify.com/api/token?grant_type=client_credentials&client_id={id}&client_secret={secret}&scope=user-read-recently-played".format(id=client_id, secret=client_secret), headers=headers)
+    datarr = r.json()
+
+    return datarr["access_token"]
+
 
 def check_if_valid_data(df: pd.DataFrame) -> bool:
     # Check if DataFrame is empty
@@ -43,32 +62,33 @@ def check_if_valid_data(df: pd.DataFrame) -> bool:
     return True
 
 
+def error_handling(error, source):
+    if os.path.exists("error_log.json") and os.stat("error_log.json").st_size != 0:
+        # check if the error_log.json file exist and if it is not empty
+        file = open("error_log.json")
+        data = json.load(file)
+    else:
+        # initialize the Dict that will become the JSON file if it doesn't exist yet
+        data = { "spotify": [], "youtube": []}
 
-if __name__ == "__main__":
+    counter = 0
+    for err in data[source]:
+        if err["error"]["status"] == error["error"]["status"]:
+            err["error"]["time"].append(int(datetime.datetime.now().timestamp()))
+            counter += 1
 
-    # Extraction of Data
+    print(counter)
+    if counter == 0:
+        error["error"].update({"time": [int(datetime.datetime.now().timestamp())]})
+        data[source].append(error)
 
-    headers = {
-        "Accept": "application/json",
-        "Content-Type": "application/json",
-        "Authorization": "Bearer {token}".format(token=TOKEN)
-    }
+    with open("error_log.json", "w") as outfile:
+        outfile.write(json.dumps(data, indent=4))
 
-    today = datetime.datetime.now()
-    yesterday = today - datetime.timedelta(days=1)
-    yesterday_unix_timestamp = int(yesterday.timestamp()) * 1000
+    start(2)
 
-    r = requests.get(
-        "https://api.spotify.com/v1/me/player/recently-played?limit=50&after={time}".format(time=yesterday_unix_timestamp),
-        headers=headers)
 
-    data = r.json()
-
-    song_names = []
-    artist_names = []
-    played_at_list = []
-    timestamps = []
-
+def prepare_data(data):
     for song in data["items"]:
         song_names.append(song["track"]["name"])
         artist_names.append(song["track"]["album"]["artists"][0]["name"])
@@ -90,18 +110,15 @@ if __name__ == "__main__":
     if check_if_valid_data(song_df):
         print("Data is valid, proceed to Load stage")
 
-
-
-
     print(song_df)
     dump = song_df.to_json()
     with open("interfaces.json", "w") as jsonFile:
         json.dump(dump, jsonFile, indent=4, sort_keys=False)
-    # Load to DB
+    
+    write_to_database(song_df)
 
 
-
-
+def write_to_database(song_df):
     engine = sqlalchemy.create_engine(DATABASE_LOCATION)
     conn = sqlite3.connect('my_played_tracks.sqlite')
     cursor = conn.cursor()
@@ -126,3 +143,50 @@ if __name__ == "__main__":
 
     conn.close()
     print("closed DB connection")
+
+
+def request_data():
+    TOKEN = request_token()
+    # Extraction of Data
+    headers = {
+        "Accept": "application/json",
+        "Content-Type": "application/json",
+        "Authorization": "Bearer {token}".format(token=TOKEN)
+    }
+
+    today = datetime.datetime.now()
+    yesterday = today - datetime.timedelta(days=1)
+    yesterday_unix_timestamp = int(yesterday.timestamp()) * 1000
+
+    r = requests.get(
+        "https://api.spotify.com/v1/me/player/recently-played?limit=50&after={time}".format(time=yesterday_unix_timestamp),
+        headers=headers)
+
+    data = r.json()
+
+    song_names = []
+    artist_names = []
+    played_at_list = []
+    timestamps = []
+
+    print(data)
+    if "error" in data:
+        error_handling(data, "spotify")
+    else:
+        prepare_data(data)
+
+    start(1)
+
+
+def start(state):
+    if state == 2:
+        time.sleep(2)
+    elif state == 1: 
+        time.sleep(3600)
+    request_data()
+
+
+if __name__ == "__main__":
+    # new_token()
+    start(0)
+
