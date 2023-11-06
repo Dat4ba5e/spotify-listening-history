@@ -75,7 +75,7 @@ def error_handling(error, source):
     for err in data[source]:
         if err["error"]["status"] == error["error"]["status"]:
             err["error"]["time"].append(int(datetime.datetime.now().timestamp()))
-            #counter += 1
+            counter += 1
 
     #print(counter)
     if counter == 0:
@@ -96,6 +96,11 @@ def error_handling(error, source):
 
 
 def prepare_data(data):
+    song_names = []
+    artist_names = []
+    played_at_list = []
+    timestamps = []
+    
     for song in data["items"]:
         song_names.append(song["track"]["name"])
         artist_names.append(song["track"]["album"]["artists"][0]["name"])
@@ -152,7 +157,7 @@ def write_to_database(song_df):
     print("closed DB connection")
 
 
-def request_data(token):
+def request_data():
     TOKEN = request_token()
     # Extraction of Data
     headers = {
@@ -173,11 +178,6 @@ def request_data(token):
 
     data = r.json()
 
-    song_names = []
-    artist_names = []
-    played_at_list = []
-    timestamps = []
-
     print(data)
     if "error" in data:
         error_handling(data, "spotify")
@@ -194,9 +194,7 @@ def start(state):
         time.sleep(600)
     elif state == 1: 
         time.sleep(3600)
-    elif state == 0: 
-        token = request_token()
-    request_data(token)
+    request_data()
 
 
 if __name__ == "__main__":
