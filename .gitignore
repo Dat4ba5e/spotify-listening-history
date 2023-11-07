@@ -122,3 +122,5 @@ error_log.json
 access_token.json
 token_log.txt
 authorization.json
+interface*.json
+raw_data/query*

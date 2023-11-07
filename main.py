@@ -173,8 +173,8 @@ def check_if_valid_data(df: pd.DataFrame) -> bool:
     for timestamp in timestamps:
         if datetime.datetime.strptime(timestamp, "%Y-%m-%d") != yesterday:
             df = df[df.timestamp == yesterday]
-            print("Removed tracks with a timestamp that wasn't yesterday")
-            print(df)
+            #print("Removed tracks with a timestamp that wasn't yesterday")
+            #print(df)
             #raise Exception("At least one of the returned songs is not from within the last 24 hours")
 
     return True
@@ -242,13 +242,17 @@ def prepare_data(data):
 
     #print(song_df)
     dump = song_df.to_json()
-    with open("interfaces.json", "w") as jsonFile:
-        json.dump(dump, jsonFile, indent=4, sort_keys=False)
+    #with open("interfaces.json", "w") as jsonFile:
+    #    json.dump(dump, jsonFile, indent=4, sort_keys=False)
     
+    with open("interfaces.json", "w") as outfile:
+        outfile.write(json.dumps(dump, indent=4))
+
     write_to_database(song_df)
 
 
 def write_to_database(song_df):
+    print(song_df)
     engine = sqlalchemy.create_engine(DATABASE_LOCATION)
     conn = sqlite3.connect('my_played_tracks.sqlite')
     cursor = conn.cursor()
@@ -263,6 +267,14 @@ def write_to_database(song_df):
     )
     """
 
+    compare_data = pd.read_sql('SeLeCt dIsTiNcT(played_at) fRoM my_played_tracks;', con=engine)
+    print(compare_data)
+
+    for entry in compare_data.played_at:
+        print(entry)
+        song_df = song_df[song_df.played_at != entry]
+
+    print(song_df)
     cursor.execute(sql_query)
     print("Established DB connection")
 
@@ -273,6 +285,15 @@ def write_to_database(song_df):
 
     conn.close()
     print("closed DB connection")
+
+
+def write_to_json(raw_data):
+    # Write method for streamlined JSON storage (like error messages)
+    for track in raw_data["items"]:
+        print(track["track"]["name"])
+    with open("alternative_data.json", "w") as outfile:
+        outfile.write(json.dumps(raw_data, indent=4))
+    pass
 
 
 def request_data():
@@ -309,6 +330,10 @@ def request_data():
         headers=headers)
 
     data = r.json()
+    if os.path.isdir("raw_data"):
+        with open(f"raw_data/query_{datetime.datetime.now().timestamp()}.json", "w") as outfile:
+            outfile.write(json.dumps(data, indent=4))
+    write_to_json(data)
 
     #print(data)
     if "error" in data:
@@ -317,8 +342,6 @@ def request_data():
         prepare_data(data)
         print("Got the Data, next query in 1 Hour")
         start(1)
-
-    
 
 
 def start(state):
