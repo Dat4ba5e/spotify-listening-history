@@ -13,10 +13,12 @@ from datetime import date, datetime
 import datetime
 import pandas as pd
 import sqlite3
+from http.client import responses
 
 DATABASE_LOCATION = "sqlite:///my_played_tracks.sqlite"
 
 def test_api():
+    # make get_token method
     TOKEN = request_token()
     headers = {
         #"Accept": "application/json",
@@ -30,8 +32,7 @@ def test_api():
     r = requests.get(
         "https://api.spotify.com/v1/artists/4Z8W4fKeB5YxbusRsdQVPb",
         headers=headers)
-    response = r.json()
-    #print(response)
+    return r.status_code
 
 # first thing to do: paste authorization code in file: authorization.json (will be generated while on first run of the program)
 # authorization code: after accepting on the website in the URL after "code="
@@ -105,6 +106,7 @@ def request_token():
 
     #print("LEDERHOSN")
     #print(response)
+    print(response)
     response.update({"Renewal_at": datetime.datetime.now().timestamp() + response["expires_in"]-10} )
     with open("access_token.json", "w") as outfile:
         outfile.write(json.dumps(response, indent=4))
@@ -180,6 +182,19 @@ def check_if_valid_data(df: pd.DataFrame) -> bool:
 
 
 def error_handling(error, source):
+    if type(error) is int and not 401:
+        print(f"Received error code {error} - {responses[error]}")
+        error = { 
+            "error": 
+                {
+                    "status": error,
+                    "message": responses[error],
+                    "time": []
+                }  
+            }
+    #api_test_result = test_api()
+    print(f"API Status: {api_test_result} - {responses[api_test_result]}")
+
     if os.path.exists("error_log.json") and os.stat("error_log.json").st_size != 0:
         # check if the error_log.json file exist and if it is not empty
         file = open("error_log.json")
@@ -328,7 +343,11 @@ def request_data():
     r = requests.get(
         "https://api.spotify.com/v1/me/player/recently-played?limit=50&after={time}".format(time=yesterday_unix_timestamp),
         headers=headers)
-
+    
+    if r.status_code > 202:
+        #print("Kritisch")
+        error_handling(r.status_code, "spotify")
+    
     data = r.json()
     
 
