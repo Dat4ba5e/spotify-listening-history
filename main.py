@@ -1,18 +1,15 @@
 import os
 import time
-import string
-import random
-import webbrowser
-import base64
 import sqlalchemy
-import urllib.parse
 from sqlalchemy.orm import sessionmaker
 import requests
 import json
-from datetime import date, datetime
 import datetime
 import pandas as pd
 import sqlite3
+
+from authorization_and_token import refresh_token, request_token, request_authorization_code
+from error_handling import error_handling
 
 DATABASE_LOCATION = "sqlite:///my_played_tracks.sqlite"
 
@@ -33,119 +30,9 @@ def test_api():
     response = r.json()
     print(response)
 
-# first thing to do: paste authorization code in file: authorization.json (will be generated while on first run of the program)
-# authorization code: after accepting on the website in the URL after "code="
-def request_authorization_code():
-    file = open("authentication.json")
-    credentials = json.load(file)
-
-    # Recommended for protection against attacks such as cross-site request forgery. See RFC-6749.
-    # used for "state" field
-    random_string = ''.join(random.choices(string.ascii_uppercase + string.digits, k=16))
-    print(random_string)
-    url = "https://accounts.spotify.com/authorize?"
-
-    params = {
-    "response_type": "code",
-    "client_id": credentials["spotify"]["client_id"],
-    "scope": credentials["spotify"]["scope"],
-    "redirect_uri": credentials["spotify"]["redirect_uri"],
-    "state": random_string
-    }
-
-    webbrowser.open("https://accounts.spotify.com/authorize?" + urllib.parse.urlencode(params))
-    
-    # implement function to automatically filter out the "state"
-
-    r = requests.get(url, params=params)
-    print(r)
-    print(type(r))
-
-    template = {"authorization_key": ""}
-    with open("authorization.json", "w") as outfile:
-        outfile.write(json.dumps(template, indent=4))
-
 
 def get_client_id_secret_b64():
     pass
-
-
-def request_token():
-    authentication_file = open("authentication.json")
-    authorization_file = open("authorization.json")
-    authentication_data = json.load(authentication_file)
-    authorization_data = json.load(authorization_file)
-
-    client_id = authentication_data["spotify"]["client_id"]
-    client_secret = authentication_data["spotify"]["client_secret"]
-    mix = f"{client_id}:{client_secret}"
-    print(mix)
-    mix_bytes = mix.encode("ascii")
-    mix_b64 = base64.urlsafe_b64encode(mix_bytes).decode("ascii")[:-1]
-    print(mix_b64)
-
-    headers = {
-        "Authorization": f"Basic {mix_b64}",
-        "Content-Type": "application/x-www-form-urlencoded"
-    }
-
-    print("................")
-    print(authorization_data["authorization_key"])
-    print("................")
-
-    param = {
-        "grant_type": "authorization_code",
-        "code": authorization_data["authorization_key"],
-        "redirect_uri": authentication_data["spotify"]["redirect_uri"]
-    }
-
-    url = "https://accounts.spotify.com/api/token?"
-    r = requests.post(url=url, headers=headers, params=param)
-    response = r.json()
-
-    print("LEDERHOSN")
-    print(response)
-    response.update({"Renewal_at": datetime.datetime.now().timestamp() + response["expires_in"]-10} )
-    with open("access_token.json", "w") as outfile:
-        outfile.write(json.dumps(response, indent=4))
-    #return response["access_token"]
-
-
-def refresh_token():
-    file = open("access_token.json")
-    data = json.load(file)
-    file_auth = open("authentication.json")
-    data2 = json.load(file_auth)
-
-    client_id = data2["spotify"]["client_id"]
-    client_secret = data2["spotify"]["client_secret"]
-    mix = f"{client_id}:{client_secret}"
-    print(mix)
-    mix_bytes = mix.encode("ascii")
-    mix_b64 = base64.urlsafe_b64encode(mix_bytes).decode("ascii")[:-1]
-    
-    refresh_token = data["refresh_token"]
-    #print(refresh_token)
-    client_id = data2["spotify"]["client_id"]
-    url = "https://accounts.spotify.com/api/token?"
-    param = {
-        "grant_type": 'refresh_token',
-        "refresh_token": refresh_token,
-        #"client_id": client_id
-    }
-
-    headers = { "Content-Type": "application/x-www-form-urlencoded", "Authorization": f"Basic {mix_b64}" }
-
-    r = requests.post(url=url, params=param, headers=headers)
-    response = r.json()
-    print(response)
-
-    if "refresh_token" not in response:
-        response.update({ "refresh_token": refresh_token })
-
-    response.update({"Renewal_at": datetime.datetime.now().timestamp() + response["expires_in"]-10} )
-    with open("access_token.json", "w") as outfile:
-        outfile.write(json.dumps(response, indent=4))
 
 
 def check_if_valid_data(df: pd.DataFrame) -> bool:
@@ -177,39 +64,6 @@ def check_if_valid_data(df: pd.DataFrame) -> bool:
             #raise Exception("At least one of the returned songs is not from within the last 24 hours")
 
     return True
-
-
-def error_handling(error, source):
-    if os.path.exists("error_log.json") and os.stat("error_log.json").st_size != 0:
-        # check if the error_log.json file exist and if it is not empty
-        file = open("error_log.json")
-        data = json.load(file)
-    else:
-        # initialize the Dict that will become the JSON file if it doesn't exist yet
-        data = { "spotify": [], "youtube": []}
-
-    counter = 0
-    for err in data[source]:
-        if err["error"]["status"] == error["error"]["status"]:
-            err["error"]["time"].append(int(datetime.datetime.now().timestamp()))
-            counter += 1
-
-    #print(counter)
-    if counter == 0:
-        error["error"].update({"time": [int(datetime.datetime.now().timestamp())]})
-        data[source].append(error)
-
-    with open("error_log.json", "w") as outfile:
-        outfile.write(json.dumps(data, indent=4))
-
-    if error["error"]["status"] == 401:
-        print("Requesting new Token")
-        with open("token_log.txt", "a") as outfile:
-            outfile.write("Requesting new Token at time {time}".format(time=datetime.datetime.now().timestamp()))
-        start(0)
-    else:
-        print("Encountered an error, trying again in 10 Minutes")
-        start(2)
 
 
 def prepare_data(data):
@@ -331,7 +185,6 @@ def request_data():
 
     data = r.json()
     
-
     #print(data)
     if "error" in data:
         error_handling(data, "spotify")
