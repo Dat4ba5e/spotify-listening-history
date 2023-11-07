@@ -4,10 +4,12 @@ import requests
 import random
 import string
 import urllib.parse
-from datetime import date, datetime
 import base64
 import datetime
 
+
+# yes I know that I could have just used some Oauth2 library
+# but I wanted to learn requests anyway 
 
 # first thing to do: paste authorization code in file: authorization.json (will be generated while on first run of the program)
 # authorization code: after accepting on the website in the URL after "code="
@@ -40,6 +42,10 @@ def request_authorization_code():
     template = {"authorization_key": ""}
     with open("authorization.json", "w") as outfile:
         outfile.write(json.dumps(template, indent=4))
+
+
+def get_client_id_secret_b64():
+    pass
 
 
 def request_token():
@@ -119,3 +125,20 @@ def refresh_token():
     with open("access_token.json", "w") as outfile:
         outfile.write(json.dumps(response, indent=4))
     
+
+def test_api():
+    TOKEN = request_token()
+    headers = {
+        #"Accept": "application/json",
+        #"Content-Type": "application/json",
+        "Authorization": f"Bearer {TOKEN}"
+    }
+
+    #print("https://api.spotify.com/v1/me/player/recently-played?limit=50&after={time}".format(time=yesterday_unix_timestamp))
+    print("")
+    print("Testing API")
+    r = requests.get(
+        "https://api.spotify.com/v1/artists/4Z8W4fKeB5YxbusRsdQVPb",
+        headers=headers)
+    response = r.json()
+    print(response)

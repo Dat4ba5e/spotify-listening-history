@@ -6,7 +6,9 @@ import pandas as pd
 
 from authorization_and_token import request_token, refresh_token
 from error_handling import error_handling
-from main import start
+from json_storage import write_to_json
+from sql_database import write_to_database
+from no_recursive_import import recursion
 
 
 def request_data():
@@ -55,7 +57,7 @@ def request_data():
         prepare_data(data)
         write_to_json(data)
         print("Got the Data, next query in 1 Hour")
-        start(1)
+        recursion(1)
 
 
 def prepare_data(data):
