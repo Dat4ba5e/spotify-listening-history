@@ -4,7 +4,6 @@ import string
 import random
 import webbrowser
 import base64
-import oauth2_client
 import sqlalchemy
 import urllib.parse
 from sqlalchemy.orm import sessionmaker
@@ -287,12 +286,13 @@ def write_to_database(song_df):
     print("closed DB connection")
 
 
-def write_to_json(raw_data):
+def write_to_json(data):
     # Write method for streamlined JSON storage (like error messages)
-    for track in raw_data["items"]:
-        print(track["track"]["name"])
+    print(data)
+    #for track in raw_data["items"]:
+    #    print(track["track"]["name"])
     with open("alternative_data.json", "w") as outfile:
-        outfile.write(json.dumps(raw_data, indent=4))
+        outfile.write(json.dumps(data, indent=4))
     pass
 
 
@@ -330,16 +330,18 @@ def request_data():
         headers=headers)
 
     data = r.json()
-    if os.path.isdir("raw_data"):
-        with open(f"raw_data/query_{datetime.datetime.now().timestamp()}.json", "w") as outfile:
-            outfile.write(json.dumps(data, indent=4))
-    write_to_json(data)
+    
 
     #print(data)
     if "error" in data:
         error_handling(data, "spotify")
     else:
+        # Only store the Raw Data if the directory "raw_data" is present, otherwise raw data will not be saved
+        if os.path.isdir("raw_data"):
+            with open(f"raw_data/query_{datetime.datetime.now().timestamp()}.json", "w") as outfile:
+                outfile.write(json.dumps(data, indent=4))
         prepare_data(data)
+        write_to_json(data)
         print("Got the Data, next query in 1 Hour")
         start(1)
 

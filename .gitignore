@@ -124,3 +124,4 @@ token_log.txt
 authorization.json
 interface*.json
 raw_data/query*
+alternative_data.json
