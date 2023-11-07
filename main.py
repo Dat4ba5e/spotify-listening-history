@@ -31,7 +31,7 @@ def test_api():
         "https://api.spotify.com/v1/artists/4Z8W4fKeB5YxbusRsdQVPb",
         headers=headers)
     response = r.json()
-    print(response)
+    #print(response)
 
 # first thing to do: paste authorization code in file: authorization.json (will be generated while on first run of the program)
 # authorization code: after accepting on the website in the URL after "code="
@@ -42,7 +42,7 @@ def request_authorization_code():
     # Recommended for protection against attacks such as cross-site request forgery. See RFC-6749.
     # used for "state" field
     random_string = ''.join(random.choices(string.ascii_uppercase + string.digits, k=16))
-    print(random_string)
+    #print(random_string)
     url = "https://accounts.spotify.com/authorize?"
 
     params = {
@@ -58,8 +58,8 @@ def request_authorization_code():
     # implement function to automatically filter out the "state"
 
     r = requests.get(url, params=params)
-    print(r)
-    print(type(r))
+    #print(r)
+    #print(type(r))
 
     template = {"authorization_key": ""}
     with open("authorization.json", "w") as outfile:
@@ -79,19 +79,19 @@ def request_token():
     client_id = authentication_data["spotify"]["client_id"]
     client_secret = authentication_data["spotify"]["client_secret"]
     mix = f"{client_id}:{client_secret}"
-    print(mix)
+    #print(mix)
     mix_bytes = mix.encode("ascii")
     mix_b64 = base64.urlsafe_b64encode(mix_bytes).decode("ascii")[:-1]
-    print(mix_b64)
+    #print(mix_b64)
 
     headers = {
         "Authorization": f"Basic {mix_b64}",
         "Content-Type": "application/x-www-form-urlencoded"
     }
 
-    print("................")
-    print(authorization_data["authorization_key"])
-    print("................")
+    #print("................")
+    #print(authorization_data["authorization_key"])
+    #print("................")
 
     param = {
         "grant_type": "authorization_code",
@@ -103,8 +103,8 @@ def request_token():
     r = requests.post(url=url, headers=headers, params=param)
     response = r.json()
 
-    print("LEDERHOSN")
-    print(response)
+    #print("LEDERHOSN")
+    #print(response)
     response.update({"Renewal_at": datetime.datetime.now().timestamp() + response["expires_in"]-10} )
     with open("access_token.json", "w") as outfile:
         outfile.write(json.dumps(response, indent=4))
@@ -251,7 +251,7 @@ def prepare_data(data):
 
 
 def write_to_database(song_df):
-    print(song_df)
+    #print(song_df)
     engine = sqlalchemy.create_engine(DATABASE_LOCATION)
     conn = sqlite3.connect('my_played_tracks.sqlite')
     cursor = conn.cursor()
@@ -267,10 +267,10 @@ def write_to_database(song_df):
     """
 
     compare_data = pd.read_sql('SeLeCt dIsTiNcT(played_at) fRoM my_played_tracks;', con=engine)
-    print(compare_data)
+    #print(compare_data)
 
     for entry in compare_data.played_at:
-        print(entry)
+        #print(entry)
         song_df = song_df[song_df.played_at != entry]
 
     print(song_df)
@@ -288,7 +288,7 @@ def write_to_database(song_df):
 
 def write_to_json(data):
     # Write method for streamlined JSON storage (like error messages)
-    print(data)
+    #print(data)
     #for track in raw_data["items"]:
     #    print(track["track"]["name"])
     with open("alternative_data.json", "w") as outfile:
