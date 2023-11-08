@@ -14,12 +14,13 @@ import datetime
 import pandas as pd
 import sqlite3
 from http.client import responses
+import re
 
 DATABASE_LOCATION = "sqlite:///my_played_tracks.sqlite"
 
 def test_api():
     # make get_token method
-    TOKEN = request_token()
+    TOKEN = refresh_token()
     headers = {
         #"Accept": "application/json",
         #"Content-Type": "application/json",
@@ -27,8 +28,7 @@ def test_api():
     }
 
     #print("https://api.spotify.com/v1/me/player/recently-played?limit=50&after={time}".format(time=yesterday_unix_timestamp))
-    print("")
-    print("Testing API")
+    print_status_message("Testing API")
     r = requests.get(
         "https://api.spotify.com/v1/artists/4Z8W4fKeB5YxbusRsdQVPb",
         headers=headers)
@@ -104,9 +104,7 @@ def request_token():
     r = requests.post(url=url, headers=headers, params=param)
     response = r.json()
 
-    #print("LEDERHOSN")
     #print(response)
-    print(response)
     response.update({"Renewal_at": datetime.datetime.now().timestamp() + response["expires_in"]-10} )
     with open("access_token.json", "w") as outfile:
         outfile.write(json.dumps(response, indent=4))
@@ -122,7 +120,7 @@ def refresh_token():
     client_id = data2["spotify"]["client_id"]
     client_secret = data2["spotify"]["client_secret"]
     mix = f"{client_id}:{client_secret}"
-    print(mix)
+    #print(mix)
     mix_bytes = mix.encode("ascii")
     mix_b64 = base64.urlsafe_b64encode(mix_bytes).decode("ascii")[:-1]
     
@@ -140,7 +138,7 @@ def refresh_token():
 
     r = requests.post(url=url, params=param, headers=headers)
     response = r.json()
-    print(response)
+    #print(response)
 
     if "refresh_token" not in response:
         response.update({ "refresh_token": refresh_token })
@@ -182,8 +180,8 @@ def check_if_valid_data(df: pd.DataFrame) -> bool:
 
 
 def error_handling(error, source):
-    if type(error) is int and not 401:
-        print(f"Received error code {error} - {responses[error]}")
+    if type(error) is int:
+        print_status_message(f"Received error code {error} - {responses[error]}", "error")
         error = { 
             "error": 
                 {
@@ -192,8 +190,9 @@ def error_handling(error, source):
                     "time": []
                 }  
             }
-    #api_test_result = test_api()
-    print(f"API Status: {api_test_result} - {responses[api_test_result]}")
+        
+    api_test_result = test_api()
+    print_status_message(f"API Status: {api_test_result} - {responses[api_test_result]}", "error")
 
     if os.path.exists("error_log.json") and os.stat("error_log.json").st_size != 0:
         # check if the error_log.json file exist and if it is not empty
@@ -218,13 +217,27 @@ def error_handling(error, source):
         outfile.write(json.dumps(data, indent=4))
 
     if error["error"]["status"] == 401:
-        print("Requesting new Token")
+        print_status_message("Requesting new Token", "error")
+        
         with open("token_log.txt", "a") as outfile:
             outfile.write("Requesting new Token at time {time}".format(time=datetime.datetime.now().timestamp()))
         start(0)
     else:
-        print("Encountered an error, trying again in 10 Minutes")
+        print_status_message("Encountered an error, trying again in 10 Minutes", "error")
         start(2)
+
+
+def print_status_message(message: str, msg_type = "status"):
+    if msg_type == "status":
+        replace_sign = "-"
+    else:
+        replace_sign = "!"
+    lines = re.sub(".", replace_sign, message)
+    print("")
+    print(lines)
+    print(message)
+    print(lines)
+    print("")
 
 
 def prepare_data(data):
@@ -252,7 +265,7 @@ def prepare_data(data):
     
     # Validate
     if check_if_valid_data(song_df):
-        print("Data is valid, proceed to Load stage")
+        print_status_message("Data is valid, proceed to Load stage")
 
     #print(song_df)
     dump = song_df.to_json()
@@ -290,15 +303,15 @@ def write_to_database(song_df):
 
     print(song_df)
     cursor.execute(sql_query)
-    print("Established DB connection")
+    print_status_message("Established DB connection")
 
     try: 
         song_df.to_sql("my_played_tracks", engine, index=False, if_exists='append')
     except:
-        print("Data already exists in the Database")
+        print_status_message("Data already exists in the Database")
 
     conn.close()
-    print("closed DB connection")
+    print_status_message("closed DB connection")
 
 
 def write_to_json(data):
@@ -313,10 +326,10 @@ def write_to_json(data):
 
 def request_data():
     if not os.path.exists("access_token.json"): 
-        print("Requesting initial Token")
+        print_status_message("Requesting initial Token")
         request_token()
     if os.path.exists("access_token.json"):
-        print("using current token")
+        print_status_message("using current token")
         file = open("access_token.json")
         token_information = json.load(file)
         if datetime.datetime.now().timestamp() >= token_information["Renewal_at"]:
@@ -338,8 +351,7 @@ def request_data():
     yesterday_unix_timestamp = int(yesterday.timestamp()) * 1000
 
     #print("https://api.spotify.com/v1/me/player/recently-played?limit=50&after={time}".format(time=yesterday_unix_timestamp))
-    print("")
-    print("Requesting Recently Played Data")
+    print_status_message("Requesting Recently Played Data")
     r = requests.get(
         "https://api.spotify.com/v1/me/player/recently-played?limit=50&after={time}".format(time=yesterday_unix_timestamp),
         headers=headers)
@@ -361,7 +373,7 @@ def request_data():
                 outfile.write(json.dumps(data, indent=4))
         prepare_data(data)
         write_to_json(data)
-        print("Got the Data, next query in 1 Hour")
+        print_status_message("Got the Data, next query in 1 Hour")
         start(1)
 
 
@@ -378,6 +390,7 @@ if __name__ == "__main__":
         start(0)
         #test_api()
     else:
+        print("")
         print("You have to generate an Authorization code first: ")
         print("https://developer.spotify.com/documentation/web-api/tutorials/code-flow")
         request_authorization_code()
