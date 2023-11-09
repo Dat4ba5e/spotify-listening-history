@@ -324,6 +324,21 @@ def write_to_json(data):
     pass
 
 
+def normalize_raw_data():
+    # Keep the RAW data from the requests in it's original form but delete duplicates
+    raw_data_directory = "raw_data"
+    if os.path.exists(raw_data_directory): 
+        if os.path.isdir(raw_data_directory):
+            for filename in os.listdir(raw_data_directory):
+                with open(os.path.join(raw_data_directory, filename)) as f:
+                    data = json.load(f)
+    pass
+
+
+def normalize_json_data():
+    pass
+
+
 def request_data():
     if not os.path.exists("access_token.json"): 
         print_status_message("Requesting initial Token")
