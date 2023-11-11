@@ -353,7 +353,7 @@ def convert_timestamp(date_string):
     return int(date_object.replace(tzinfo=pytz.UTC).timestamp() * 1000)
 
 
-def request_song_data():
+def get_token():
     if not os.path.exists("access_token.json"): 
         print_status_message("Requesting initial Token")
         request_token()
@@ -364,9 +364,12 @@ def request_song_data():
         if datetime.datetime.now().timestamp() >= token_information["Renewal_at"]:
             print("Token expired, requesting new token")
             refresh_token()
+    return token_information["access_token"]
 
+
+def request_song_data():
     #print(token_information)
-    TOKEN = token_information["access_token"]
+    TOKEN = get_token()
     #print(TOKEN)
     # Extraction of Data
     headers = {
