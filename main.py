@@ -15,6 +15,7 @@ import pandas as pd
 import sqlite3
 from http.client import responses
 import re
+import pytz
 
 DATABASE_LOCATION = "sqlite:///my_played_tracks.sqlite"
 
@@ -337,6 +338,12 @@ def normalize_raw_data():
 
 def normalize_json_data():
     pass
+
+
+def convert_timestamp(date_string):
+    date_format = "%Y-%m-%dT%H:%M:%S.%fZ"
+    date_object = datetime.datetime.strptime(date_string, date_format)
+    return int(date_object.replace(tzinfo=pytz.UTC).timestamp() * 1000)
 
 
 def request_data():
