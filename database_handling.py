@@ -83,6 +83,7 @@ def request_data(url, headers):
         # TODO: error handling
         return
 
+      
 data = request_data()
 with open("data.json", "w") as outfile:
     outfile.write(json.dumps(data, indent=4))
