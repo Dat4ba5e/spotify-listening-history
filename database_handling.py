@@ -61,7 +61,7 @@ def write_to_database(song_df):
     print_status_message("closed DB connection")
 
 
-def request_data(url, headers):
+def request_data():
     url = "https://api.spotify.com/v1/artists/3o2dn2O0FCVsWDFSh8qxgG"
 
     TOKEN = get_token()
