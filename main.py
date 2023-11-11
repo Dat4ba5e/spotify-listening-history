@@ -21,7 +21,7 @@ DATABASE_LOCATION = "sqlite:///my_played_tracks.sqlite"
 
 def test_api():
     # make get_token method
-    TOKEN = refresh_token()
+    TOKEN = get_token()
     headers = {
         #"Accept": "application/json",
         #"Content-Type": "application/json",

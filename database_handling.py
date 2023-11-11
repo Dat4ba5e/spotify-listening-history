@@ -1,12 +1,13 @@
 import sqlalchemy, sqlite3, requests, json
 import pandas as pd
+import datetime
 
 from main import print_status_message, get_token
 
 DATABASE_LOCATION = "sqlite:///my_played_tracks.sqlite"
 engine = sqlalchemy.create_engine(DATABASE_LOCATION)
 conn = sqlite3.connect('my_played_tracks.sqlite')
-cursor = conn.cursor()
+CURSOR = conn.cursor()
 
 
 # Creating Databases (hardcoded according to the Entity Relationship Model)
@@ -40,7 +41,7 @@ def write_to_database(song_df):
     )
     """
 
-    cursor.execute(sql_query)
+    CURSOR.execute(sql_query)
     print_status_message("Established DB connection")
     
     compare_data = pd.read_sql('SeLeCt dIsTiNcT(played_at) fRoM my_played_tracks;', con=engine)
@@ -61,29 +62,93 @@ def write_to_database(song_df):
     print_status_message("closed DB connection")
 
 
-def request_data():
-    url = "https://api.spotify.com/v1/artists/3o2dn2O0FCVsWDFSh8qxgG"
+def request_data(url, headers = False):
+    #url = "https://api.spotify.com/v1/artists/3o2dn2O0FCVsWDFSh8qxgG"
 
     TOKEN = get_token()
-    headers = {
-        #"Accept": "application/json",
-        #"Content-Type": "application/json",
-        "Authorization": f"Bearer {TOKEN}"
-    }
+    if not headers:
+        headers = {
+            #"Accept": "application/json",
+            #"Content-Type": "application/json",
+            "Authorization": f"Bearer {TOKEN}"
+        }
+    if headers["Authorization"] == "":
+        headers["Authorization"] = f"Bearer {TOKEN}"
 
+    print(headers)
     #print("https://api.spotify.com/v1/me/player/recently-played?limit=50&after={time}".format(time=yesterday_unix_timestamp))
     print_status_message("Testing API")
     r = requests.get(
         url,
         headers=headers)
-    if r.status_code == 200:
+    if r.status_code <= 202:
+        print(r.status_code)
         return r.json()
     else:
-        print_status_message("Artist information could not be fetched")
+        print_status_message("Information could not be fetched")
         # TODO: error handling
         return
 
-      
-data = request_data()
+
+def get_artists(artist_ids: list):
+    api_hook = "https://api.spotify.com/v1/artists?ids="
+    query = ""
+    for id in artist_ids:
+        query += id + ","
+    query = query.rstrip(",")
+    print(query)
+    data = request_data(api_hook+query)
+
+    artist_id = []
+    artist_name = []
+    artist_image = []
+
+    for artist in data["artists"]:
+        artist_id.append(artist["id"])
+        artist_name.append(artist["name"])
+        artist_image.append(artist["images"][0]["url"])
+
+    artist_dict = {
+        "artist_id": artist_id,
+        "artist_name": artist_name, 
+        "artist_image": artist_image
+    }
+
+    df = pd.DataFrame(artist_dict, columns=artist_dict.keys())
+    print(df)
+    print(artist_image[0])
+    return df    
+
+
+def get_recently_played():
+    headers = {
+        "Accept": "application/json",
+        "Content-Type": "application/json",
+        "Authorization": ""
+    }
+
+    today = datetime.datetime.now()
+    yesterday = today - datetime.timedelta(days=1)
+    yesterday_unix_timestamp = int(yesterday.timestamp()) * 1000
+
+    url = "https://api.spotify.com/v1/me/player/recently-played?limit=50&after={time}".format(time=yesterday_unix_timestamp)
+    return request_data(url=url, headers=headers)
+
+
+
+get_recently_played()
+#url = "https://api.spotify.com/v1/tracks/1ZGeKrKrY3JN3iSfmF4T5j"
+url = "https://api.spotify.com/v1/artists/3o2dn2O0FCVsWDFSh8qxgG"
+#data = request_data(url)
+artist_list = ["3o2dn2O0FCVsWDFSh8qxgG", "4ZGFYwFpBWxq6FxqilvRJT", "5KWOCu1saEHAhPiLKlOLIy"]
+
+#data = get_artists(artist_list)
+
+# Blend
+data = request_data("https://api.spotify.com/v1/playlists/37i9dQZF1EJBfSGYDdU6jO")
+
+# My Playlist
+#data = request_data("https://api.spotify.com/v1/playlists/2tbHgpS0fMAVVxxwwTdQuf")
 with open("data.json", "w") as outfile:
     outfile.write(json.dumps(data, indent=4))
+
