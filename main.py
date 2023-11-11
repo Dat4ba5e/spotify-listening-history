@@ -246,21 +246,25 @@ def prepare_data(data):
     artist_names = []
     played_at_list = []
     timestamps = []
+    played_at_unix_list = []
     
     for song in data["items"]:
         song_names.append(song["track"]["name"])
         artist_names.append(song["track"]["album"]["artists"][0]["name"])
         played_at_list.append(song["played_at"])
         timestamps.append(song["played_at"][0:10])
+        played_at_unix_list.append(convert_timestamp(song["played_at"]))
 
     song_dict = {
         "song_name": song_names,
         "artist_name": artist_names,
         "played_at": played_at_list,
-        "timestamp": timestamps
+        "timestamp": timestamps,
+        "timestamp_unix": played_at_unix_list
     }
 
-    song_df = pd.DataFrame(song_dict, columns=["song_name", "artist_name", "played_at", "timestamp"])
+    song_df = pd.DataFrame(song_dict, columns=["song_name", "artist_name", "played_at", "timestamp", "timestamp_unix"])
+    song_df = song_df.sort_values(by="timestamp_unix", ascending=True, na_position="first")
 
     #print(song_df)
     
@@ -285,28 +289,31 @@ def write_to_database(song_df):
     conn = sqlite3.connect('my_played_tracks.sqlite')
     cursor = conn.cursor()
 
+    print("Creating Table")
     sql_query = """
     CREATE TABLE IF NOT EXISTS my_played_tracks(
         song_name VARCHAR(200),
         artist_name VARCHAR(200),
         played_at VARCHAR(200),
         timestamp VARCHAR(200),
+        timestamp_unix VARCHAR(200),
         CONSTRAINT primary_key_constraint PRIMARY KEY (played_at)
     )
     """
 
+    cursor.execute(sql_query)
+    print_status_message("Established DB connection")
+    
     compare_data = pd.read_sql('SeLeCt dIsTiNcT(played_at) fRoM my_played_tracks;', con=engine)
     #print(compare_data)
 
     for entry in compare_data.played_at:
         #print(entry)
         song_df = song_df[song_df.played_at != entry]
-
-    print(song_df)
-    cursor.execute(sql_query)
-    print_status_message("Established DB connection")
-
-    try: 
+    try:   
+        print("------")
+        print(song_df)
+        print("------")
         song_df.to_sql("my_played_tracks", engine, index=False, if_exists='append')
     except:
         print_status_message("Data already exists in the Database")
@@ -346,7 +353,7 @@ def convert_timestamp(date_string):
     return int(date_object.replace(tzinfo=pytz.UTC).timestamp() * 1000)
 
 
-def request_data():
+def request_song_data():
     if not os.path.exists("access_token.json"): 
         print_status_message("Requesting initial Token")
         request_token()
@@ -404,7 +411,7 @@ def start(state):
         time.sleep(600)
     elif state == 1: 
         time.sleep(3600)
-    request_data()
+    request_song_data()
 
 
 if __name__ == "__main__":
