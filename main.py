@@ -348,6 +348,8 @@ def normalize_json_data():
 
 
 def convert_timestamp(date_string):
+    if "." not in date_string:
+        date_string = date_string[:len(date_string)-1] + ".0Z"
     date_format = "%Y-%m-%dT%H:%M:%S.%fZ"
     date_object = datetime.datetime.strptime(date_string, date_format)
     return int(date_object.replace(tzinfo=pytz.UTC).timestamp() * 1000)
