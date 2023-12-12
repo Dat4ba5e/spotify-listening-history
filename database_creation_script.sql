@@ -1,5 +1,5 @@
 CREATE TABLE IF NOT EXISTS Song(
-    song_id VARCHAR(200) NOT NULL PRIMARY KEY,
+    song_id VARCHAR(1000) NOT NULL PRIMARY KEY,
     song_name VARCHAR(200) NOT NULL,
     duration int,
     is_explicit boolean
@@ -7,12 +7,13 @@ CREATE TABLE IF NOT EXISTS Song(
 
 CREATE TABLE IF NOT EXISTS played_at(
     played_at int NOT NULL PRIMARY KEY,
+    played_at_date date,
     song_id VARCHAR(200), 
     FOREIGN KEY(song_id) REFERENCES Song(song_id)
 );
 
 CREATE TABLE IF NOT EXISTS Artist(
-    artist_id VARCHAR(200) NOT NULL PRIMARY KEY,
+    artist_id VARCHAR(1000) NOT NULL PRIMARY KEY,
     artist_name VARCHAR(200),
     artist_image VARCHAR(500)
 );
@@ -23,16 +24,23 @@ CREATE TABLE IF NOT EXISTS Genre(
 );
 
 CREATE TABLE IF NOT EXISTS Album(
-    album_id VARCHAR(200) NOT NULL PRIMARY KEY,
+    album_id VARCHAR(1000) NOT NULL PRIMARY KEY,
     album_name VARCHAR(200) NOT NULL,
+    album_type VARCHAR(200),
     release_date date NOT NULL,
     album_image VARCHAR(500)
 );
 
 CREATE TABLE IF NOT EXISTS Playlist(
-    playlist_id VARCHAR(200) NOT NULL PRIMARY KEY,
+    playlist_id VARCHAR(1000) NOT NULL PRIMARY KEY,
     current_snapshot VARCHAR(1000) NOT NULL,
     FOREIGN KEY (current_snapshot) REFERENCES Playlist_snapshot(snapshot_id)
+);
+
+CREATE TABLE IF NOT EXISTS listened_to_playlist_at(
+    listened_to_at INT NOT NULL PRIMARY KEY,
+    timestamp VARCHAR(200),
+    FOREIGN KEY (playlist_id) REFERENCES Playlist(playlist_id)
 );
 
 CREATE TABLE IF NOT EXISTS Playlist_snapshot(
@@ -79,4 +87,25 @@ CREATE TABLE IF NOT EXISTS song_in_playlist(
     PRIMARY KEY (song_id, playlist_id),
     FOREIGN KEY (song_id) REFERENCES Song(song_id),
     FOREIGN KEY (playlist_id) REFERENCES Playlist(playlist_id)
+);
+
+CREATE TABLE IF NOT EXISTS Region(
+    region_id VARCHAR(200),
+    region_full VARCHAR(200)
+);
+
+CREATE TABLE IF NOT EXISTS song_region(
+    song_id VARCHAR(200),
+    region_id VARCHAR(200),
+    PRIMARY KEY (song_id, region_id),
+    FOREIGN KEY (song_id) REFERENCES Song(song_id),
+    FOREIGN KEY (region_id) REFERENCES Region(region_id)
+);
+
+CREATE TABLE IF NOT EXISTS album_region(
+    album_id VARCHAR(200),
+    region_id VARCHAR(200),
+    PRIMARY KEY (album_id, region_id),
+    FOREIGN KEY (album_id) REFERENCES Album(album_id),
+    FOREIGN KEY (region_id) REFERENCES Region(region_id)
 );
