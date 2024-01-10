@@ -258,7 +258,9 @@ def db_query():
     #compare_data = pd.read_sql(f'SeLeCt {primary_key} fRoM {table};', con=engine)
     pass
 
-
+# TODO Write code that gets all playlists of the user and writes them into the database (only use at initial start)
+def get_all_playlists():
+    pass
 
 create_database()
 get_recently_played()
