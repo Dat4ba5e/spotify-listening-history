@@ -1,9 +1,7 @@
-# Kinda got annoyed at python so I am rewriting this stuff in GO :)
+# spotify-listening-history
+This repository is kind of a proof of concept and a first contact with the spotify API, the Process of aquiring the Token is very rudimentary and you need to manually copy it from the URL that gets created when running the program for the first time.
 
-# spotify-datastream
-just a fun little project to visualize my spotify listening history
+I'm currently rewriting the project in GO and it should be waaaaay better :)
 
-
-no the access token is not valid anymore :)
-
+I might add better documentation if someone actually wants it.
 
